@@ -9,6 +9,7 @@ on:
 jobs:
   # ==== BACKEND: Install deps ====
   install:
+    if: github.ref == 'refs/heads/backend' || github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     defaults:
       run:
