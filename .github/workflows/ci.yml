@@ -1,0 +1,114 @@
+name: CI/CD
+
+on:
+  push:
+    branches: [ "main", "frontend", "backend" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  # ==== BACKEND: Install deps ====
+  install:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: server
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.23.11'
+
+      - name: Cache Go modules
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/go/pkg/mod
+            ~/.cache/go-build
+          key: ${{ runner.os }}-go-${{ hashFiles('server/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      - name: Download dependencies
+        run: go mod tidy
+
+  # ==== BACKEND: Tests ====
+  test-go:
+    runs-on: ubuntu-latest
+    needs: install
+    if: github.ref == 'refs/heads/backend' || github.ref == 'refs/heads/main'
+    defaults:
+      run:
+        working-directory: server
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check formatting
+        run: go fmt ./...
+
+      - name: Static analysis
+        run: go vet ./...
+
+      - name: Build
+        run: go build ./...
+
+      - name: Run tests
+        run: go test ./...
+
+  # ==== FRONTEND: Build ====
+  frontend-build:
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/frontend' || github.ref == 'refs/heads/main'
+    defaults:
+      run:
+        working-directory: client
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Cache node_modules
+        uses: actions/cache@v4
+        with:
+          path: client/node_modules
+          key: ${{ runner.os }}-node-${{ hashFiles('client/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build Nuxt app
+        run: npm run build
+
+      - name: Generate static files
+        run: npm run generate
+
+  # ==== DOCKER: Build backend & frontend images ====
+  docker-build:
+    runs-on: ubuntu-latest
+    needs: [test-go, frontend-build]
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+
+      # Backend image
+      - name: Build backend Docker image
+        run: |
+          docker build \
+            --file server/Dockerfile \
+            --tag backend-go:${{ github.sha }} \
+            ./server
+
+      # Frontend image (Nginx + Nuxt static)
+      - name: Build frontend Docker image
+        run: |
+          docker build \
+            --file client/Dockerfile \
+            --tag frontend-nuxt:${{ github.sha }} \
+            ./client
