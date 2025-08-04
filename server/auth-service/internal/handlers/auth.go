@@ -1,19 +1,19 @@
 package handlers
 
 import (
-	"github.com/aniizif/stack-mate/auth-service/internal/models"
-	"github.com/aniizif/stack-mate/auth-service/internal/repository"
-	"github.com/aniizif/stack-mate/auth-service/pkg/hash"
 	"github.com/gin-gonic/gin"
 	"net/http"
+	"time"
+
+	"github.com/aniizif/stack-mate/auth-service/internal/services"
 )
 
 type AuthHandler struct {
-	repo *repository.UserRepository
+	services *services.AuthService
 }
 
-func NewAuthHandler(repo *repository.UserRepository) *AuthHandler {
-	return &AuthHandler{repo: repo}
+func NewAuthHandler(services *services.AuthService) *AuthHandler {
+	return &AuthHandler{services: services}
 }
 
 func (h *AuthHandler) Register(c *gin.Context) {
@@ -23,32 +23,51 @@ func (h *AuthHandler) Register(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&input); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"status": "error", "message": err.Error()})
 		return
 	}
 
-	if user, _ := h.repo.GetByEmail(input.Email); user != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Email already exists"})
-		return
-	}
-
-	hashedPassword, err := hash.Password(input.Password)
+	user, token, err := h.services.Register(input.Email, input.Password)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to hash password"})
-	}
-
-	user := models.User{
-		Email:        input.Email,
-		PasswordHash: hashedPassword,
-	}
-
-	if err := h.repo.CreateUser(&user); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create user"})
+		c.JSON(http.StatusInternalServerError, gin.H{"status": "error", "message": err.Error()})
 		return
 	}
 
 	c.JSON(http.StatusCreated, gin.H{
-		"id":    user.ID,
-		"email": user.Email,
+		"status": "success",
+		"data": gin.H{
+			"id":           user.ID,
+			"email":        user.Email,
+			"access_token": token,
+			"token_type":   "Bearer",
+			"expires_in":   int((15 * time.Minute).Seconds()), // 900
+		},
+	})
+}
+
+func (h *AuthHandler) Login(c *gin.Context) {
+	var input struct {
+		Email    string `json:"email" binding:"required,email"`
+		Password string `json:"password" binding:"required,min=6,max=32"`
+	}
+
+	if err := c.ShouldBindJSON(&input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"status": "error", "message": err.Error()})
+		return
+	}
+
+	token, err := h.services.Login(input.Email, input.Password)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"status": "error", "message": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"status": "success",
+		"data": gin.H{
+			"access_token": token,
+			"token_type":   "Bearer",
+			"expires_in":   int((15 * time.Minute).Seconds()),
+		},
 	})
 }

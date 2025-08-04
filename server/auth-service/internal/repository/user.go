@@ -1,8 +1,9 @@
 package repository
 
 import (
-	"github.com/aniizif/stack-mate/auth-service/internal/models"
 	"gorm.io/gorm"
+
+	"github.com/aniizif/stack-mate/auth-service/internal/models"
 )
 
 type UserRepository struct {
