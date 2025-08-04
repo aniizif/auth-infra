@@ -1,0 +1,12 @@
+# nonk8s
+apiVersion: 1
+
+providers:
+  - name: "BACKEND"
+    orgId: 1
+    folder: ""
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 30
+    options:
+      path: /var/lib/grafana/dashboards
