@@ -10,6 +10,7 @@ jobs:
   # ==== BACKEND: Install deps ====
   install:
     runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/backend' || github.ref == 'refs/heads/main'
     defaults:
       run:
         working-directory: server
@@ -38,7 +39,6 @@ jobs:
   test-go:
     runs-on: ubuntu-latest
     needs: install
-    if: github.ref == 'refs/heads/backend' || github.ref == 'refs/heads/main'
     defaults:
       run:
         working-directory: server
