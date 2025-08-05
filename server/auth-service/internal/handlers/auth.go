@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"github.com/aniizif/stack-mate/auth-service/internal/metrics"
 	"github.com/gin-gonic/gin"
 	"net/http"
 	"time"
@@ -24,12 +25,14 @@ func (h *AuthHandler) Register(c *gin.Context) {
 
 	if err := c.ShouldBindJSON(&input); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"status": "error", "message": err.Error()})
+		metrics.AUTHFailureTotal.WithLabelValues(c.FullPath()).Inc()
 		return
 	}
 
 	user, token, err := h.services.Register(input.Email, input.Password)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"status": "error", "message": err.Error()})
+		metrics.AUTHFailureTotal.WithLabelValues(c.FullPath()).Inc()
 		return
 	}
 
@@ -43,6 +46,7 @@ func (h *AuthHandler) Register(c *gin.Context) {
 			"expires_in":   int((15 * time.Minute).Seconds()), // 900
 		},
 	})
+	metrics.AUTHSuccessTotal.WithLabelValues(c.FullPath()).Inc()
 }
 
 func (h *AuthHandler) Login(c *gin.Context) {
@@ -53,12 +57,14 @@ func (h *AuthHandler) Login(c *gin.Context) {
 
 	if err := c.ShouldBindJSON(&input); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"status": "error", "message": err.Error()})
+		metrics.AUTHFailureTotal.WithLabelValues(c.FullPath()).Inc()
 		return
 	}
 
 	token, err := h.services.Login(input.Email, input.Password)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"status": "error", "message": err.Error()})
+		metrics.AUTHFailureTotal.WithLabelValues(c.FullPath()).Inc()
 		return
 	}
 
@@ -70,4 +76,5 @@ func (h *AuthHandler) Login(c *gin.Context) {
 			"expires_in":   int((15 * time.Minute).Seconds()),
 		},
 	})
+	metrics.AUTHSuccessTotal.WithLabelValues(c.FullPath()).Inc()
 }
