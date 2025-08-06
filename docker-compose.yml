@@ -14,10 +14,10 @@ services:
       AUTH_PORT: ${AUTH_PORT}
       JWT_SECRET: ${JWT_SECRET}
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN}
-    networks:
-      - backend
     ports:
       - "${AUTH_PORT:-8080}:${AUTH_PORT:-8080}"
+    networks:
+      - backend
 
   postgres-dev:
     image: postgres:16
@@ -31,12 +31,12 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
-    networks:
-      - backend
-    ports:
-      - "${DB_PORT:-5432}:${DB_PORT:-5432}"
     volumes:
       - postgres-data:/var/lib/postgresql/data
+    ports:
+      - "${DB_PORT:-5432}:${DB_PORT:-5432}"
+    networks:
+      - backend
 
 volumes:
   postgres-data:
