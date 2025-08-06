@@ -1,0 +1,9 @@
+groups:
+  - name: latency-rules
+    interval: 15s
+    rules:
+      - record: auth_service:request_duration_seconds:p95
+        expr: histogram_quantile(0.95, sum(rate(http_requests_duration_seconds_bucket[5m])) by (le, endpoint)) * 1000
+
+      - record: auth_service:sla_15d
+        expr: avg_over_time(up{job="auth-service"}[15d]) * 100
