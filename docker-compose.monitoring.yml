@@ -71,5 +71,8 @@ volumes:
   prometheus-data:
 
 networks:
+  backend:
+    external: true
   monitoring:
     driver: bridge
+    external: true

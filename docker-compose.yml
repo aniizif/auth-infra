@@ -1,4 +1,16 @@
 services:
+  nginx:
+    image: nginx:latest
+    depends_on:
+      - auth-service
+    volumes:
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+    ports:
+      - "${AUTH_PORT:-8080}:${AUTH_PORT:-8080}"
+    networks:
+      - backend
+      - monitoring
+
   auth-service:
     build: server
     restart: unless-stopped
@@ -14,8 +26,8 @@ services:
       AUTH_PORT: ${AUTH_PORT}
       JWT_SECRET: ${JWT_SECRET}
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN}
-    ports:
-      - "${AUTH_PORT:-8080}:${AUTH_PORT:-8080}"
+    expose:
+      - "8080"
     networks:
       - backend
 
@@ -44,3 +56,6 @@ volumes:
 networks:
   backend:
     driver: bridge
+    external: true
+  monitoring:
+    external: true
