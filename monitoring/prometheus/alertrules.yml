@@ -1,0 +1,33 @@
+groups:
+  - name: All Instances
+    rules:
+      - alert: InstanceDown
+        expr: up == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Instance {{ $labels.instance }} down"
+          description: "{{ $labels.instance }} of job {{ $labels.job }} has been down for more than a 2 minutes."
+
+  - name: P95 Authentication Service Delay
+    rules:
+      - alert: High P95 Latency
+        expr: auth_service:request_duration_seconds:p95{endpoint!="/metrics"} > 500
+        for: 15s
+        labels:
+          severity: warning
+        annotations:
+          summary: "High latency (P95) on {{ $labels.endpoint }}"
+          description: "P95 latency is above 500ms for more than 5 minutes."
+
+  - name: SLA of Authentication Service
+    rules:
+      - alert: SLA < 99%
+        expr: auth_service:sla_15d < 99
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Auth service SLA dropped"
+          description: "The authorization service's SLA is {{ $value }}% (less than 99%) over the last 15 days."
